@@ -4,17 +4,13 @@
 
 package toonnel
 
-type messageType uint
+type MessageType uint
+type Direction uint
 
 const (
-	TypeUndefined messageType = iota
+	TypeError = iota
 	TypeData
-	TypeClose
-	TypeChanListReq
-	TypeChanList
 )
-
-type Direction uint
 
 const (
 	DirectionUP Direction = iota
@@ -22,17 +18,16 @@ const (
 )
 
 type Message struct {
-	Direction Direction `json:"-"` // This is set by the mw when the msg is spawned or recv
-
-	ChannelName string      `json:"channelName"`
-	Type        messageType `json:"type"`
-	Content     string      `json:"content"`
-}
-
-func (msg Message) IsValid() bool {
-	return msg.Type >= TypeData && msg.Type <= TypeChanList
+	Direction   Direction `json:"-"` // This is set by the mw when the msg is spawned or recv
+	Type        MessageType
+	ChannelName string `json:"channelName"`
+	Content     string `json:"content"`
 }
 
 func StringMessage(content string) Message {
-	return Message{Type: TypeData, Direction: DirectionUP, Content: content}
+	return Message{Direction: DirectionUP, Content: content}
+}
+
+func ErrorMessage(content string) Message {
+	return Message{}
 }

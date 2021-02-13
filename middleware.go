@@ -74,15 +74,9 @@ func readFromSocket(msg *Message, inConn net.Conn) error {
 	if err != nil {
 		return incomingError
 	}
-
 	if err := json.Unmarshal(data, &msg); err != nil {
 		return formatError
 	}
-
-	if !msg.IsValid() {
-		return invalidMessage
-	}
-	// log.Printf("Received: %+v\n", msg)
 	return nil
 }
 
