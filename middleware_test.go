@@ -8,39 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 	"testing"
 )
-
-func TestStart(t *testing.T) {
-	t.Run("occupied port", func(t *testing.T) {
-		mockSocket, _ := net.Listen("tcp", ":0")
-		tPort, _ := strconv.Atoi(strings.Split(mockSocket.Addr().String(), "]:")[1])
-
-		if err := Start(uint(tPort)); err == nil {
-			t.Error("port should be occupied")
-		}
-	})
-
-	t.Run("unoccupied port", func(t *testing.T) {
-		port := 0
-		err := Start(uint(port))
-
-		if err != nil {
-			t.Errorf("should be startable (port 0)")
-		}
-
-		if !started {
-			t.Error("expected started = true, found false")
-		}
-
-		if extConnections == nil || managerMappings == nil {
-			t.Errorf("unexpected: extConnections and managerMappings should be initialited; extConnections = %v, managerMappings = %v",
-				extConnections, managerMappings)
-		}
-	})
-}
 
 func TestReadFromSocket(t *testing.T) {
 	var port string
@@ -155,63 +125,4 @@ func okWrite(port string) func(t *testing.T) {
 			t.Errorf("unexpected error, %s", err.Error())
 		}
 	}
-}
-
-func TestHandleNewIncomingConnection(t *testing.T) {
-	var port string
-	go func(port *string) {
-		t.Parallel()
-		_ = Start(0)
-		*port = fmt.Sprintf(":%s", strings.Split(socketServer.Addr().String(), "]:")[1])
-
-		conn, _ := socketServer.Accept()
-		handleNewIncomingConnection(conn)
-
-		rem, ok := extConnections["127.0.0.1"]
-		if !ok {
-			t.Errorf("expected inChan != nil for remoteConn['127.0.0.1']")
-		}
-
-		select {
-		case _ = <-rem.inChan:
-		default:
-			t.Error("expected message from remoteConn.inChan")
-		}
-	}(&port)
-	for port == "" {
-	}
-	t.Run("send handler", sendMessageHandler(port))
-}
-
-func sendMessageHandler(port string) func(t *testing.T) {
-	return func(t *testing.T) {
-		conn, _ := net.Dial("tcp", port)
-		msg := StringMessage("test")
-
-		if err := writeFromSocket(msg, conn); err != nil {
-			t.Errorf("unexpected error")
-		}
-	}
-}
-
-func TestRemoveConn(t *testing.T) {
-	var port string
-	go func(port *string) {
-		t.Parallel()
-		_ = Start(0)
-		*port = fmt.Sprintf(":%s", strings.Split(socketServer.Addr().String(), "]:")[1])
-
-		conn, _ := socketServer.Accept()
-		handleNewIncomingConnection(conn)
-
-		removeConn("127.0.0.1")
-		_, okConn := extConnections["127.0.0.1"]
-		_, okMappings := extConnections["127.0.0.1"]
-		if okConn || okMappings {
-			t.Errorf("expected no conn/mappings for 127.0.0.1")
-		}
-	}(&port)
-	for port == "" {
-	}
-	t.Run("send handler", sendMessageHandler(port))
 }

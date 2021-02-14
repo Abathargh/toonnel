@@ -4,6 +4,8 @@
 
 package toonnel
 
+import "encoding/json"
+
 type MessageType uint
 type Direction uint
 
@@ -26,6 +28,11 @@ type Message struct {
 
 func StringMessage(content string) Message {
 	return Message{Direction: DirectionUP, Content: content}
+}
+
+func JsonMessage(data interface{}) Message {
+	strMsg, _ := json.Marshal(data)
+	return Message{Direction: DirectionUP, Content: string(strMsg)}
 }
 
 func ErrorMessage(content string) Message {

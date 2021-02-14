@@ -8,6 +8,7 @@ import (
 
 const (
 	maxRetryErr = 5
+	maxTcpPort  = 65535
 )
 
 var (
@@ -27,7 +28,7 @@ type tChannel struct {
 // protocols
 type TServer interface {
 	Start() error
-	Listen() error
+	Listen()
 	Close() error
 }
 
@@ -71,7 +72,7 @@ func (serv *TCPServer) Start() error {
 	if serv.opts.channels == nil || len(serv.opts.channels) == 0 {
 		return emptyChannelList
 	}
-	if serv.opts.port > 65535 {
+	if serv.opts.port > maxTcpPort {
 		return invalidTCPPort
 	}
 	sPort := fmt.Sprintf(":%d", serv.opts.port)
@@ -95,16 +96,17 @@ func (serv *TCPServer) handleIncomingConnection(conn net.Conn) {
 		currTry := 0
 		errMsg := Message{Type: TypeError, Direction: DirectionDOWN, Content: "chan does not exist"}
 		writeErr := writeFromSocket(errMsg, conn)
-		for writeErr != nil && currTry < maxRetries {
+		for writeErr != nil && currTry < maxRetryErr {
 			writeErr = writeFromSocket(errMsg, conn)
 			currTry++
 		}
 	}
-	go func() {
-		for {
-
+	go func(msgTChan *tChannel) {
+		for msg := range msgTChan.channel {
+			res := msgTChan.callback(msg)
+			msgTChan.channel <- res
 		}
-	}()
+	}(tChan)
 }
 
 func (serv *TCPServer) Listen() {
